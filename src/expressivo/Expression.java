@@ -40,34 +40,51 @@ public interface Expression {
     
     
     /**
-     * Parse an expression.
-     * @param input expression to parse, as defined in the PS3 handout.
-     * @return expression AST for the input
-     * @throws IllegalArgumentException if the expression is invalid
+     * Parse an expression from a string.
+     * * <p>The input must follow these grammar rules:
+     * <ul>
+     * <li>Supported operators: {@code +} (addition) and {@code *} (multiplication).</li>
+     * <li>Operator precedence: {@code *} has higher precedence than {@code +}.</li>
+     * <li>Grouping: Parentheses {@code ()} can be used to override default precedence.</li>
+     * <li>Numbers: Non-negative integers or floating-point numbers (e.g., "7", "4.2").</li>
+     * <li>Variables: Case-sensitive non-empty sequences of letters (e.g., "y", "Foo").</li>
+     * <li>Whitespace: Leading/trailing whitespace and spaces around operators or 
+     * parentheses are ignored (e.g., "x + y" is equivalent to "x+y").</li>
+     * </ul>
+     *
+     * @param input expression string to parse. Must not be null.
+     * @return an Expression AST representing the input string.
+     * @throws IllegalArgumentException if the input string does not conform to the 
+     * grammar rules, contains unsupported operators, or is mathematically 
+     * malformed (e.g., "x +", "(x + y").
      */
     public static Expression parse(String input) {
         throw new RuntimeException("unimplemented");
     }
     
     /**
-     * @return a parsable representation of this expression, such that
-     * for all e:Expression, e.equals(Expression.parse(e.toString())).
+     * @return a string representation of this expression that can be 
+     * parsed back into an Expression structurally equal to this one.
+     * The output should only contain numbers, variables, '+', '*', 
+     * and parentheses where necessary.
      */
     @Override 
     public String toString();
 
     /**
-     * @param thatObject any object
-     * @return true if and only if this and thatObject are structurally-equal
-     * Expressions, as defined in the PS3 handout.
+     * Compares the specified object with this expression for structural equality.
+     * Two expressions are structurally equal if they have the same tree structure,
+     * including the same operations and identical constants/variables 
+     * in the same positions. Note that (x+y) is NOT structurally equal to (y+x).
+     * * @param thatObject any object
+     * @return true if this and thatObject represent the same expression tree
      */
     @Override
     public boolean equals(Object thatObject);
     
     /**
-     * @return hash code value consistent with the equals() definition of structural
-     * equality, such that for all e1,e2:Expression,
-     *     e1.equals(e2) implies e1.hashCode() == e2.hashCode()
+     * @return a hash code value consistent with the definition of structural 
+     * equality. If e1.equals(e2), then e1.hashCode() == e2.hashCode().
      */
     @Override
     public int hashCode();
