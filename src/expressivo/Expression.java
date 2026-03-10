@@ -3,6 +3,8 @@
  */
 package expressivo;
 
+import java.util.Map;
+
 /**
  * An immutable data type representing a polynomial expression of:
  *   + and *
@@ -16,8 +18,26 @@ package expressivo;
  */
 public interface Expression {
     
-    // Datatype definition
-    //   TODO
+    // Datatype definition:
+    // Expression=Number(n:double)+Variable(s:String)+Plus(left:expression,right:expression)+Multiple(leftLexpr,right:expression)
+    
+    /**
+     * Differentiates this expression with respect to a variable.
+     * 
+     * @param variable non-empty case-sensitive letter sequence.
+     * @return a new Expression representing the derivative.
+     * @throws IllegalArgumentException if variable format is invalid.
+     */
+    public Expression differentiate(String variable);
+
+    /**
+     * Simplifies this expression by substituting variables and folding constants.
+     * 
+     * @param environment map from variable names to values; may be empty.
+     * @return a simplified Expression equivalent to the original under the given environment.
+     */
+    public Expression simplify(Map<String, Double> environment);
+    
     
     /**
      * Parse an expression.
