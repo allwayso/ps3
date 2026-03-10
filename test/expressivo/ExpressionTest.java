@@ -14,9 +14,6 @@ import org.junit.Test;
  * Tests for the Expression abstract data type.
  */
 public class ExpressionTest {
-
-    // Testing strategy
-    //   TODO
     
     @Test(expected=AssertionError.class)
     public void testAssertionsEnabled() {
@@ -144,25 +141,29 @@ public class ExpressionTest {
         Expression e1 = new Plus(new Variable("a"), new Variable("b"));
         Expression e2 = new Multiple(new Number(2), new Variable("z"));
         
-        String s1 = e1.toString().replaceAll("\\s+", "");
-        String s2 = e2.toString().replaceAll("\\s+", "");
-        
-        assertEquals("expected a+b", "a+b", s1);
-        assertEquals("expected 2*z", "2*z", s2);
+        // Use round-trip to verify structural integrity
+        assertEquals("Parsed a+b should be structurally equal", 
+                     e1, Expression.parse(e1.toString()));
+                     
+        assertEquals("Parsed 2*z should be structurally equal", 
+                     e2, Expression.parse(e2.toString()));
     }
 
     // Covers: Nested structure requiring parentheses for precedence
     // Case: (1 + 2) * 3
     @Test
     public void testToStringPrecedenceParentheses() {
-        Expression e = new Multiple(
-                            new Plus(new Number(1), new Number(2)), 
-                            new Number(3)
-                        );
-        String s = e.toString().replaceAll("\\s+", "");
+        Expression original = new Multiple(
+                                new Plus(new Number(1), new Number(2)), 
+                                new Number(3)
+                            );
         
-        // Parentheses are strictly necessary to differentiate from 1 + 2 * 3
-        assertEquals("expected (1+2)*3", "(1+2)*3", s);
+        // Structural equality check instead of literal string comparison
+        assertEquals("Should be structurally equal", 
+                     original, Expression.parse(original.toString()));
+        
+        // Check for necessary grouping
+        assertTrue(original.toString().contains("(") && original.toString().contains(")"));
     }
 
     // Covers: Deeply nested structure

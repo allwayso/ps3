@@ -32,12 +32,13 @@ public interface Expression {
 
     /**
      * Simplifies this expression by substituting variables and folding constants.
-     * 
-     * @param environment map from variable names to values; may be empty.
-     * @return a simplified Expression equivalent to the original under the given environment.
+     * @param environment a map from variable names to their numerical values.
+     * The environment must not be modified by this method.
+     * @return an Expression where variables present in the environment are 
+     * replaced by their values, and constant subexpressions are 
+     * evaluated (folded) into a single Number where possible.
      */
     public Expression simplify(Map<String, Double> environment);
-    
     
     /**
      * Parse an expression from a string.
@@ -59,7 +60,82 @@ public interface Expression {
      * malformed (e.g., "x +", "(x + y").
      */
     public static Expression parse(String input) {
-        throw new RuntimeException("unimplemented");
+        if (input == null) {
+            throw new IllegalArgumentException("Input must not be null");
+        }
+        
+        // Step 1: Tokenize - Add spaces around operators/parens to ensure proper splitting
+        String sanitized = input.replace("(", " ( ").replace(")", " ) ")
+                                .replace("+", " + ").replace("*", " * ");
+        // Split by any amount of whitespace and remove empty tokens from the array
+        String[] tokens = sanitized.trim().split("\\s+");
+        
+        // Handle purely whitespace or empty input
+        if (tokens.length == 0 || (tokens.length == 1 && tokens[0].isEmpty())) {
+            throw new IllegalArgumentException("Input string is empty or blank");
+        }
+
+        try {
+            int[] pos = {0};
+            Expression result = parseExpression(tokens, pos);
+            
+            // Check for trailing garbage (e.g., "x + y 123")
+            if (pos[0] < tokens.length) {
+                throw new IllegalArgumentException("Unexpected tokens at end of expression");
+            }
+            return result;
+        } catch (IllegalArgumentException e) {
+            // Re-throw specific grammar/syntax errors
+            throw e;
+        } catch (Exception e) {
+            // Wrap other unexpected structural errors
+            throw new IllegalArgumentException("Malformed expression: " + e.getMessage());
+        }
+    }
+
+    private static Expression parseExpression(String[] tokens, int[] pos) {
+        Expression left = parseTerm(tokens, pos);
+        while (pos[0] < tokens.length && tokens[pos[0]].equals("+")) {
+            pos[0]++; // Consume '+'
+            if (pos[0] >= tokens.length) throw new IllegalArgumentException("Dangling '+' operator");
+            Expression right = parseTerm(tokens, pos);
+            left = new Plus(left, right);
+        }
+        return left;
+    }
+
+    private static Expression parseTerm(String[] tokens, int[] pos) {
+        Expression left = parsePrimary(tokens, pos);
+        while (pos[0] < tokens.length && tokens[pos[0]].equals("*")) {
+            pos[0]++; // Consume '*'
+            if (pos[0] >= tokens.length) throw new IllegalArgumentException("Dangling '*' operator");
+            Expression right = parsePrimary(tokens, pos);
+            left = new Multiple(left, right);
+        }
+        return left;
+    }
+
+    private static Expression parsePrimary(String[] tokens, int[] pos) {
+        if (pos[0] >= tokens.length) {
+            throw new IllegalArgumentException("Missing operand at end of expression");
+        }
+        
+        String token = tokens[pos[0]++];
+        
+        if (token.equals("(")) {
+            Expression sub = parseExpression(tokens, pos);
+            if (pos[0] >= tokens.length || !tokens[pos[0]].equals(")")) {
+                throw new IllegalArgumentException("Mismatched or missing closing parenthesis");
+            }
+            pos[0]++; // Consume ')'
+            return sub;
+        } else if (token.matches("[a-zA-Z]+")) {
+            return new Variable(token);
+        } else if (token.matches("[0-9]*\\.?[0-9]+")) {
+            return new Number(Double.parseDouble(token));
+        } else {
+            throw new IllegalArgumentException("Unsupported operator or illegal character: " + token);
+        }
     }
     
     /**
