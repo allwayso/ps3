@@ -24,7 +24,19 @@ public class Commands {
      * @throws IllegalArgumentException if the expression or variable is invalid
      */
     public static String differentiate(String expression, String variable) {
-        throw new RuntimeException("unimplemented");
+        // Validate that the variable consists only of letters and is not empty
+        if (!variable.matches("[a-zA-Z]+")) {
+            throw new IllegalArgumentException("Variable must be a nonempty string of letters");
+        }
+        
+        // Parse the string expression into an Expression object
+        Expression expr = Expression.parse(expression);
+        
+        // Delegate the differentiation logic to the Expression object
+        Expression derivative = expr.differentiate(variable);
+        
+        // Convert the resulting Expression AST back to a string
+        return derivative.toString();
     }
     
     /**
@@ -40,7 +52,16 @@ public class Commands {
      * @throws IllegalArgumentException if the expression is invalid
      */
     public static String simplify(String expression, Map<String,Double> environment) {
-        throw new RuntimeException("unimplemented");
+        // Parse the string expression into an Expression object
+        Expression expr = Expression.parse(expression);
+        
+        // Delegate the simplification logic to the Expression object
+        // The implementation in the variants (Plus, Multiply, etc.) handles the recursion
+        Expression simplified = expr.simplify(environment);
+        
+        // Convert the simplified AST back to a string.
+        // If the result is a single number, Number.toString() will handle the formatting.
+        return simplified.toString();
     }
     
 }

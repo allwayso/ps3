@@ -75,36 +75,35 @@ public interface Expression {
         // build imput stream
         CharStream stream = new ANTLRInputStream(string);
 
-        // configure
+        // configure lexer
         ExpressionLexer lexer = new ExpressionLexer(stream);
-        lexer.removeErrorListeners(); // 移除默认的控制台打印
+        lexer.removeErrorListeners(); 
         lexer.addErrorListener(new BaseErrorListener() {
             @Override
             public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, 
                                     int line, int charPositionInLine, String msg, RecognitionException e) {
-                // 捕获非法字符（如 ^）
+                // catch illegal arguments
                 throw new IllegalArgumentException("Invalid syntax at line " + line + ":" + charPositionInLine + " - " + msg);
             }
         });
         
         TokenStream tokens = new CommonTokenStream(lexer);
         
-        // 3. 配置 Parser 并添加错误监听器
+        // 3. set up parser
         ExpressionParser parser = new ExpressionParser(tokens);
         parser.removeErrorListeners();
         parser.addErrorListener(new BaseErrorListener() {
             @Override
             public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, 
                                     int line, int charPositionInLine, String msg, RecognitionException e) {
-                // 捕获语法错误（如括号不匹配、操作符悬挂）
                 throw new IllegalArgumentException("Parser error at line " + line + ":" + charPositionInLine + " - " + msg);
             }
         });
 
-        // 4. 解析起始规则
+      
         ParseTree tree = parser.root();
 
-        // 5. 遍历并构建 AST
+        // Traverse the AST
         ParseTreeWalker walker = new ParseTreeWalker();
         MakeExpression exprMaker = new MakeExpression();
         walker.walk(exprMaker, tree);
@@ -139,6 +138,5 @@ public interface Expression {
     @Override
     public int hashCode();
     
-    // TODO more instance methods
     
 }
