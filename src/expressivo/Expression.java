@@ -3,7 +3,19 @@
  */
 package expressivo;
 
-import java.util.Map;
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.TokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
+import expressivo.parser.ExpressionLexer;
+import expressivo.parser.ExpressionParser;
+import org.antlr.v4.runtime.BaseErrorListener;
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.RecognitionException;
+import java.util.*;
+
 
 /**
  * An immutable data type representing a polynomial expression of:
@@ -59,83 +71,45 @@ public interface Expression {
      * grammar rules, contains unsupported operators, or is mathematically 
      * malformed (e.g., "x +", "(x + y").
      */
-    public static Expression parse(String input) {
-        if (input == null) {
-            throw new IllegalArgumentException("Input must not be null");
-        }
-        
-        // Step 1: Tokenize - Add spaces around operators/parens to ensure proper splitting
-        String sanitized = input.replace("(", " ( ").replace(")", " ) ")
-                                .replace("+", " + ").replace("*", " * ");
-        // Split by any amount of whitespace and remove empty tokens from the array
-        String[] tokens = sanitized.trim().split("\\s+");
-        
-        // Handle purely whitespace or empty input
-        if (tokens.length == 0 || (tokens.length == 1 && tokens[0].isEmpty())) {
-            throw new IllegalArgumentException("Input string is empty or blank");
-        }
+    public static Expression parse(String string) {
+        // 1. 创建输入流
+        CharStream stream = new ANTLRInputStream(string);
 
-        try {
-            int[] pos = {0};
-            Expression result = parseExpression(tokens, pos);
-            
-            // Check for trailing garbage (e.g., "x + y 123")
-            if (pos[0] < tokens.length) {
-                throw new IllegalArgumentException("Unexpected tokens at end of expression");
+        // 2. 配置 Lexer 并添加错误监听器
+        ExpressionLexer lexer = new ExpressionLexer(stream);
+        lexer.removeErrorListeners(); // 移除默认的控制台打印
+        lexer.addErrorListener(new BaseErrorListener() {
+            @Override
+            public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, 
+                                    int line, int charPositionInLine, String msg, RecognitionException e) {
+                // 捕获非法字符（如 ^）
+                throw new IllegalArgumentException("Invalid syntax at line " + line + ":" + charPositionInLine + " - " + msg);
             }
-            return result;
-        } catch (IllegalArgumentException e) {
-            // Re-throw specific grammar/syntax errors
-            throw e;
-        } catch (Exception e) {
-            // Wrap other unexpected structural errors
-            throw new IllegalArgumentException("Malformed expression: " + e.getMessage());
-        }
-    }
-
-    private static Expression parseExpression(String[] tokens, int[] pos) {
-        Expression left = parseTerm(tokens, pos);
-        while (pos[0] < tokens.length && tokens[pos[0]].equals("+")) {
-            pos[0]++; // Consume '+'
-            if (pos[0] >= tokens.length) throw new IllegalArgumentException("Dangling '+' operator");
-            Expression right = parseTerm(tokens, pos);
-            left = new Plus(left, right);
-        }
-        return left;
-    }
-
-    private static Expression parseTerm(String[] tokens, int[] pos) {
-        Expression left = parsePrimary(tokens, pos);
-        while (pos[0] < tokens.length && tokens[pos[0]].equals("*")) {
-            pos[0]++; // Consume '*'
-            if (pos[0] >= tokens.length) throw new IllegalArgumentException("Dangling '*' operator");
-            Expression right = parsePrimary(tokens, pos);
-            left = new Multiple(left, right);
-        }
-        return left;
-    }
-
-    private static Expression parsePrimary(String[] tokens, int[] pos) {
-        if (pos[0] >= tokens.length) {
-            throw new IllegalArgumentException("Missing operand at end of expression");
-        }
+        });
         
-        String token = tokens[pos[0]++];
+        TokenStream tokens = new CommonTokenStream(lexer);
         
-        if (token.equals("(")) {
-            Expression sub = parseExpression(tokens, pos);
-            if (pos[0] >= tokens.length || !tokens[pos[0]].equals(")")) {
-                throw new IllegalArgumentException("Mismatched or missing closing parenthesis");
+        // 3. 配置 Parser 并添加错误监听器
+        ExpressionParser parser = new ExpressionParser(tokens);
+        parser.removeErrorListeners();
+        parser.addErrorListener(new BaseErrorListener() {
+            @Override
+            public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, 
+                                    int line, int charPositionInLine, String msg, RecognitionException e) {
+                // 捕获语法错误（如括号不匹配、操作符悬挂）
+                throw new IllegalArgumentException("Parser error at line " + line + ":" + charPositionInLine + " - " + msg);
             }
-            pos[0]++; // Consume ')'
-            return sub;
-        } else if (token.matches("[a-zA-Z]+")) {
-            return new Variable(token);
-        } else if (token.matches("[0-9]*\\.?[0-9]+")) {
-            return new Number(Double.parseDouble(token));
-        } else {
-            throw new IllegalArgumentException("Unsupported operator or illegal character: " + token);
-        }
+        });
+
+        // 4. 解析起始规则
+        ParseTree tree = parser.root();
+
+        // 5. 遍历并构建 AST
+        ParseTreeWalker walker = new ParseTreeWalker();
+        MakeExpression exprMaker = new MakeExpression();
+        walker.walk(exprMaker, tree);
+        
+        return exprMaker.getExpression();
     }
     
     /**
