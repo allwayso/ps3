@@ -72,10 +72,10 @@ public interface Expression {
      * malformed (e.g., "x +", "(x + y").
      */
     public static Expression parse(String string) {
-        // 1. 创建输入流
+        // build imput stream
         CharStream stream = new ANTLRInputStream(string);
 
-        // 2. 配置 Lexer 并添加错误监听器
+        // configure
         ExpressionLexer lexer = new ExpressionLexer(stream);
         lexer.removeErrorListeners(); // 移除默认的控制台打印
         lexer.addErrorListener(new BaseErrorListener() {
